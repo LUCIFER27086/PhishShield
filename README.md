@@ -1,3 +1,11 @@
+![PhishShield Banner](screenshots/risk_chart.png)
+
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![Cybersecurity](https://img.shields.io/badge/Domain-Cybersecurity-green)
+![Status](https://img.shields.io/badge/Status-Complete-success)
+
+# 🛡️ PhishShield – Intelligent Email and URL Phishing Detection System
+
 # PhishShield – Intelligent Email and URL Phishing Detection System
 
 ## 🧠 Overview
