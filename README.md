@@ -85,7 +85,7 @@ This project is for academic and research use only.
 - [x] Folder structure & README  
 - [x] Project report (DOCX)  
 - [x] Added main.py and features.py skeleton  
-- [ ] Implement analyze_url()  
+- [x] Implement analyze_url()  
 - [ ] Implement analyze_email()  
 - [ ] Implement calculate_score()  
 - [ ] Add visualization (matplotlib)  
