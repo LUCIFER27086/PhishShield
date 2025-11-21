@@ -9,7 +9,7 @@ import pandas as pd
 
 # Load ML Models
 
-url_model = joblib.load("models/url_model.pkl")        # RandomForest model
+"""url_model = joblib.load("models/url_model.pkl")        # RandomForest model"""
 email_model = joblib.load("models/email_model.pkl")    # Logistic Regression model
 email_tfidf = joblib.load("models/email_tfidf.pkl")    # TF-IDF vectorizer
 
