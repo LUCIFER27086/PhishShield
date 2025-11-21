@@ -1,18 +1,30 @@
 import re
 import tldextract
+from textblob import TextBlob
+import joblib
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+# Load ML Models
+
+url_model = joblib.load("models/url_model.pkl")
+url_tfidf = joblib.load("models/url_tfidf.pkl")
+
+email_model = joblib.load("models/email_model.pkl")
+email_tfidf = joblib.load("models/email_tfidf.pkl")
+
+
+
+# URL Feature Extraction (heuristics)
 
 def analyze_url(url):
-    """
-    Extract structuralnad lexical features from a url
-    (Suspicious words, IP-based URL, domain analysis, etc.)
+    features = {}
 
-    """
-    features={}
-     # 1. check if url is IP based instead of domain
+    # IP-based detection
     ip_pattern = r'(\d{1,3}\.){3}\d{1,3}'
     features['ip_based'] = bool(re.search(ip_pattern, url))
 
-     # 2. Extract domain and subdomain using tldextract
     extracted = tldextract.extract(url)
     domain = extracted.domain
     subdomain = extracted.subdomain
@@ -22,96 +34,112 @@ def analyze_url(url):
     features['subdomain'] = subdomain
     features['suffix'] = suffix
 
-    # 3. Count number of dots
     features['num_dots'] = url.count('.')
 
-    # 4. Suspicious keywords in URL
     suspicious_words = ['login', 'verify', 'update', 'secure', 'banking', 'account']
     features['suspicious_words'] = any(word in url.lower() for word in suspicious_words)
 
-    # 5. Too many hyphens (-) could indicate fake domains
     features['num_hyphens'] = url.count('-')
-
-    # 6. URL length (long URLs are often suspicious)
     features['url_length'] = len(url)
-
-    # 7. Encoded characters (phishers use %20, %3D, etc.)
     features['encoded_chars'] = '%' in url
-
-    # 8. HTTPS or not
     features['https'] = url.startswith("https://")
-
-    # 9. Number of subdomains (ex: login.paypal.com)
     features['subdomain_count'] = len(subdomain.split('.')) if subdomain else 0
-
 
     return features
 
-def analyze_email(text):
-    """
-    extract lingusitic and sentiment based features from email text.
-    (Like urgency words, sentiment score, link count and stuff)
 
-    """
-    features = {}
-    import re
-from textblob import TextBlob
+
+# Email Feature Extraction (heuristics)
 
 def analyze_email(text):
-    """
-    Extract linguistic, sentiment, and structure-based features from email text.
-    Returns a dictionary of detected features.
-    """
-
     features = {}
-
-    # 1. Lowercase the text for easier processing
     clean_text = text.lower()
 
-    # 2. Urgent / Threatening keywords
-    urgency_words = ['urgent', 'immediately', 'suspended', 'verify', 
-                     'alert', 'warning', 'limited time', 'account locked']
+    urgency_words = ['urgent', 'immediately', 'suspended', 'verify', 'alert', 'warning']
     features['urgent_words'] = any(word in clean_text for word in urgency_words)
 
-    # 3. Phishing intent keywords
-    phishing_words = ['password', 'bank', 'update', 'security', 'click here', 
-                      'confirm', 'reset', 'unlock']
+    phishing_words = ['password', 'bank', 'update', 'security', 'click here', 'confirm']
     features['phishing_words'] = any(word in clean_text for word in phishing_words)
 
-    # 4. check no of links inside the email
     url_regex = r'(http[s]?://[^\s]+)'
     features['link_count'] = len(re.findall(url_regex, text))
 
-    # 5. Sentiment polarity (negative/threatening emails are often phishing)
-    sentiment = TextBlob(text).sentiment.polarity
-    features['sentiment'] = sentiment
+    features['sentiment'] = TextBlob(text).sentiment.polarity
 
-    # 6. checking if HTML content is present
     html_regex = r'<[^>]+>'
     features['contains_html'] = bool(re.search(html_regex, text))
 
-    # 7. Excessive punctuation (like !!!)
     features['exclamation_count'] = clean_text.count('!')
 
-    # 8. Suspicious sender spoof (if "from:" exists)
     spoof_regex = r'from:\s.*@(?!gmail\.com|yahoo\.com|outlook\.com)'
     features['possible_spoof'] = bool(re.search(spoof_regex, clean_text))
 
-    # 9. Word count (short emails with high urgency → suspicious)
     features['word_count'] = len(clean_text.split())
 
     return features
 
-def calculate_score(features):
-    """
-    compute phishing probability scorebased on the extracted features
-    """
-    score = 0
-    verdict = "Pending"
-    return score, verdict
+
+
+# ML Predictions
+
+def predict_url_ml(url):
+    vector = url_tfidf.transform([url])
+    prob = url_model.predict_proba(vector)[0][1]  # probability phishing
+    return prob
+
+
+def predict_email_ml(text):
+    vector = email_tfidf.transform([text])
+    prob = email_model.predict_proba(vector)[0][1]  # probability phishing
+    return prob
+
+
+
+# Hybrid Score: ML + Heuristics
+
+def calculate_score(features, ml_probability):
+    # Heuristic score
+    h_score = 0
+
+    if features.get('ip_based'): h_score += 20
+    if features.get('suspicious_words'): h_score += 15
+    if features.get('num_dots', 0) > 3: h_score += 10
+    if features.get('num_hyphens', 0) > 4: h_score += 10
+    if features.get('encoded_chars'): h_score += 10
+    if not features.get('https'): h_score += 20
+    if features.get('urgent_words'): h_score += 20
+    if features.get('phishing_words'): h_score += 15
+    if features.get('link_count', 0) > 2: h_score += 10
+    if features.get('sentiment', 0) < -0.3: h_score += 10
+    if features.get('contains_html'): h_score += 10
+
+    # Normalize heuristic score to 0–100
+    h_score = min(h_score, 100)
+
+    # Hybrid Score
+    final_score = (0.6 * (ml_probability * 100)) + (0.4 * h_score)
+    final_score = min(final_score, 100)
+
+    # Verdict
+    if final_score < 30:
+        verdict = "Safe"
+    elif final_score < 60:
+        verdict = "Suspicious"
+    else:
+        verdict = "Dangerous"
+
+    return final_score, verdict
+
+
+
+# Visualization
 
 def visualize_result(features, score, verdict):
-    """
-    Generate visual graph and save it under screenshots/.
-    """
-    pass
+    keys = list(features.keys())
+    values = [int(v) if isinstance(v, bool) else v for v in features.values()]
+
+    plt.figure(figsize=(8, 5))
+    plt.barh(keys, values)
+    plt.title(f"PhishShield Risk Analysis\nScore: {round(score,2)}% - Verdict: {verdict}")
+    plt.tight_layout()
+    plt.savefig("screenshots/risk_chart.png")
