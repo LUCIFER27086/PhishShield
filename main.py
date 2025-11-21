@@ -16,26 +16,23 @@ def main():
     user_input = input("Enter a URL or an Email text:\n\n> ")
 
     # Decide if input is URL or Email
-    if "http://" in user_input or "https://" in user_input or "www" in user_input:
+    if "http" in user_input or "www" in user_input:
         print("\nDetected Input Type: URL\n")
+        input_type = "url"
 
-        # 1. Extract heuristic features from URL
         features = analyze_url(user_input)
-
-        # 2. ML prediction (RandomForest)
-        ml_prob = predict_url_ml(features)
+        ml_prob = 0.0   # NO ML for URLs
 
     else:
         print("\nDetected Input Type: Email Text\n")
+        input_type = "email"
 
-        # 1. Extract heuristic features from email
         features = analyze_email(user_input)
-
-        # 2. ML prediction (TF-IDF + Logistic Regression)
         ml_prob = predict_email_ml(user_input)
 
     # 3. Combine ML + Heuristics
-    final_score, verdict = calculate_score(features, ml_prob)
+    final_score, verdict = calculate_score(features, ml_prob, input_type)
+
 
     # 4. Display Results
     print("============ RESULT ============\n")

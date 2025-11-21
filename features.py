@@ -117,45 +117,9 @@ def analyze_email(text):
 # ML Prediction Functions
 
 def predict_url_ml(features_dict):
-    # Exact column order from training dataset
-    column_order = [
-        'index',
-        'having_IPhaving_IP_Address',
-        'URLURL_Length',
-        'Shortining_Service',
-        'having_At_Symbol',
-        'double_slash_redirecting',
-        'Prefix_Suffix',
-        'having_Sub_Domain',
-        'SSLfinal_State',
-        'Domain_registeration_length',
-        'Favicon',
-        'port',
-        'HTTPS_token',
-        'Request_URL',
-        'URL_of_Anchor',
-        'Links_in_tags',
-        'SFH',
-        'Submitting_to_email',
-        'Abnormal_URL',
-        'Redirect',
-        'on_mouseover',
-        'RightClick',
-        'popUpWidnow',
-        'Iframe',
-        'age_of_domain',
-        'DNSRecord',
-        'web_traffic',
-        'Page_Rank',
-        'Google_Index',
-        'Links_pointing_to_page',
-        'Statistical_report'
-    ]
+    # URL ML removed — use heuristics only
+    return 0.0
 
-    # Ensure missing fields default to 0
-    fixed_features = {col: features_dict.get(col, 0) for col in column_order}
-
-    df = pd.DataFrame([fixed_features], columns=column_order)
 
     # Predict probability
     prob = url_model.predict_proba(df)[0][1]
@@ -171,23 +135,37 @@ def predict_email_ml(text):
 
 # Hybrid Scoring
 
-def calculate_score(features, ml_prob):
+def calculate_score(features, ml_prob, input_type):
     h_score = 0
 
-    # Heuristic scoring logic
-    if features.get('urgent_words'): h_score += 20
-    if features.get('phishing_words'): h_score += 20
-    if features.get('exclamation_count', 0) > 2: h_score += 10
-    if features.get('contains_html'): h_score += 15
-    if features.get('link_count', 0) > 2: h_score += 10
-    if features.get('sentiment', 0) < -0.3: h_score += 10
+    if input_type == "url":
+        # URL Heuristics Only
+        if features.get('having_IPhaving_IP_Address'): h_score += 25
+        if features.get('URLURL_Length'): h_score += 10
+        if features.get('Shortining_Service'): h_score += 15
+        if features.get('having_At_Symbol'): h_score += 15
+        if features.get('double_slash_redirecting'): h_score += 10
+        if features.get('Prefix_Suffix'): h_score += 10
+        if features.get('having_Sub_Domain'): h_score += 15
+        if not features.get('HTTPS_token'): h_score += 20
+        if features.get('Statistical_report'): h_score += 20
 
-    h_score = min(h_score, 100)
+        final_score = h_score
 
-    final_score = (0.6 * ml_prob * 100) + (0.4 * h_score)
-    final_score = min(final_score, 100)
+    else:
+        # EMAIL → ML + heuristic (all good)
+        if features.get('urgent_words'): h_score += 20
+        if features.get('phishing_words'): h_score += 20
+        if features.get('exclamation_count', 0) > 2: h_score += 10
+        if features.get('contains_html'): h_score += 15
+        if features.get('link_count', 0) > 2: h_score += 10
+        if features.get('sentiment', 0) < -0.3: h_score += 10
 
-    if final_score < 30:
+        h_score = min(h_score, 100)
+        final_score = (0.8 * ml_prob * 100) + (0.2 * h_score)
+
+    # Verdict
+    if final_score < 35:
         verdict = "Safe"
     elif final_score < 60:
         verdict = "Suspicious"

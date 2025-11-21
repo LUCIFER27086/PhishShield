@@ -77,8 +77,6 @@ PhishShield/
 ├── train_email_model.py
 │
 ├── models/
-│   ├── url_model.pkl
-│   ├── url_tfidf.pkl
 │   ├── email_model.pkl
 │   ├── email_tfidf.pkl
 │
@@ -88,7 +86,6 @@ PhishShield/
 │   ├── email_sample.png
 │
 ├── data/
-│   ├── phishing_site_urls.csv
 │   ├── phishing_emails.csv
 │
 ├── docs/
@@ -121,7 +118,7 @@ python -m textblob.download_corpora
 
 ## 🤖 Training the Machine Learning Models
 
-### **1️⃣ Train URL Model**
+### **1️⃣ Train URL Model(Currently not trained)**
 ```bash
 python train_url_model.py
 ```
