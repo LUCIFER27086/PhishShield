@@ -21,6 +21,8 @@ email_tfidf = joblib.load("models/email_tfidf.pkl")    # TF-IDF vectorizer
 
 def analyze_url(url):
     features = {}
+    
+    features["index"] = 0     # required to match training dataset columns(First error fixed)
 
     # 1. IP-based URL
     ip_pattern = r"(\d{1,3}\.){3}\d{1,3}"
@@ -100,8 +102,48 @@ def analyze_email(text):
 # ML Prediction Functions
 
 def predict_url_ml(features_dict):
-    df = pd.DataFrame([features_dict])
-    prob = url_model.predict_proba(df)[0][1]   # Probability of phishing
+    # Exact column order from training dataset
+    column_order = [
+        'index',
+        'having_IPhaving_IP_Address',
+        'URLURL_Length',
+        'Shortining_Service',
+        'having_At_Symbol',
+        'double_slash_redirecting',
+        'Prefix_Suffix',
+        'having_Sub_Domain',
+        'SSLfinal_State',
+        'Domain_registeration_length',
+        'Favicon',
+        'port',
+        'HTTPS_token',
+        'Request_URL',
+        'URL_of_Anchor',
+        'Links_in_tags',
+        'SFH',
+        'Submitting_to_email',
+        'Abnormal_URL',
+        'Redirect',
+        'on_mouseover',
+        'RightClick',
+        'popUpWidnow',
+        'Iframe',
+        'age_of_domain',
+        'DNSRecord',
+        'web_traffic',
+        'Page_Rank',
+        'Google_Index',
+        'Links_pointing_to_page',
+        'Statistical_report'
+    ]
+
+    # Ensure missing fields default to 0
+    fixed_features = {col: features_dict.get(col, 0) for col in column_order}
+
+    df = pd.DataFrame([fixed_features], columns=column_order)
+
+    # Predict probability
+    prob = url_model.predict_proba(df)[0][1]
     return prob
 
 
