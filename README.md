@@ -78,7 +78,7 @@ PhishShield/
 Clone the repo and install the dependencies:
 
 ```bash
-git clonehttps://github.com/sameermanvi/PhishShield.git
+git clone https://github.com/sameermanvi/PhishShield.git
 cd PhishShield
 pip install -r requirements.txt
 ```
