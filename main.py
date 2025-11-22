@@ -6,52 +6,64 @@ from features import (
     visualize_result
 )
 
+
 def main():
     print("========================================")
     print("        🛡️  PhishShield v1.0            ")
     print("   AI-Powered Phishing Detection Tool   ")
     print("========================================\n")
 
-    #User Input """Fixes User's Multiline input for email"""
-    
     print("Enter email text (press ENTER twice to finish):")
+
+    # MULTI-LINE INPUT FIX
     lines = []
     while True:
         line = input()
-        if line == "":                  
+        if line == "":
             break
         lines.append(line)
 
     user_input = "\n".join(lines)
 
+    
+    # FIXED DETECTION LOGIC (MUST BE INDENTED HERE)
+    
 
-    # Decide if input is URL or Email
-    if "http://" in user_input or "https://" in user_input or "www" in user_input:
-        input_type = "url"
-        print("\nDetected Input Type: URL\n")
-
-        # URL → Heuristic analysis only
-        features = analyze_url(user_input)
-        ml_prob = 0.0   # No ML for URLs
-
-    else:
+    # 1. If multi-line → treat as EMAIL
+    if "\n" in user_input.strip():
         input_type = "email"
         print("\nDetected Input Type: Email Text\n")
 
-        # EMAIL → Heuristics + ML model
         features = analyze_email(user_input)
         ml_prob = predict_email_ml(user_input)
 
-    # Final hybrid score
+    # 2. If single line → detect URL or email
+    else:
+        if "http://" in user_input or "https://" in user_input or "www" in user_input:
+            input_type = "url"
+            print("\nDetected Input Type: URL\n")
+
+            features = analyze_url(user_input)
+            ml_prob = 0.0  # URL = NO ML
+
+        else:
+            input_type = "email"
+            print("\nDetected Input Type: Email Text\n")
+
+            features = analyze_email(user_input)
+            ml_prob = predict_email_ml(user_input)
+
+    # ---------------------------------------------------
+    # Continue with scoring
+    # ---------------------------------------------------
+
     final_score, verdict = calculate_score(features, ml_prob, input_type)
 
-    # Display results
     print("============ RESULT ============\n")
     print(f"ML Probability of Phishing : {round(ml_prob * 100, 2)}%")
     print(f"Final Risk Score           : {round(final_score, 2)}%")
     print(f"Verdict                    : {verdict}")
 
-    # Save visualization
     print("\nGenerating risk visualization chart...")
     visualize_result(features, final_score, verdict)
     print("Chart saved in: screenshots/risk_chart.png")
@@ -59,6 +71,7 @@ def main():
     print("\n========================================")
     print("        Scan complete. Stay safe!        ")
     print("========================================")
+
 
 if __name__ == "__main__":
     main()
