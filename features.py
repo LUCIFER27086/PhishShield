@@ -131,7 +131,7 @@ def calculate_score(features, ml_prob, input_type):
         if features['sentiment'] < -0.3: h_score += 35
 
         h_score = min(h_score, 100)
-        final_score = (0.8 * ml_prob * 100) - (0.2 * h_score)
+        final_score = (0.9 * ml_prob * 100) + (0.1 * h_score)
 
     # Verdict
     if final_score < 30:
@@ -152,7 +152,7 @@ def visualize_result(features, score, verdict):
     values = [int(v) if isinstance(v, bool) else v for v in features.values()]
 
     plt.figure(figsize=(9, 6))
-    plt.barh(labels, values, color="orange")
+    plt.barh(labels, values, color="red")
     plt.title(f"PhishShield Risk Analysis\nScore: {round(score,2)} | Verdict: {verdict}")
     plt.tight_layout()
     plt.savefig("screenshots/risk_chart.png")
