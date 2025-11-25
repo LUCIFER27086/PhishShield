@@ -4,16 +4,17 @@
 PhishShield is a lightweight phishing-email detection tool that connects a Python backend with a Chrome extension to scan Gmail emails in real time. It analyzes email content using heuristic rules and shows a safety banner directly inside Gmail.
 
 ## Project Structure
-PhishShield/
-│
-├── Backend/
-│   └── server.py
-│
-└── Extension/
-    ├── content.js
-    ├── manifest.json
-    └── styles.css
-
+   
+    PhishShield/
+    │
+    ├── Backend/
+    │   └── server.py
+    │
+    └── Extension/
+        ├── content.js
+        ├── manifest.json
+        └── styles.css
+    
 ## How It Works
 1. The Chrome extension observes Gmail when an email is opened.
 2. It extracts the email subject and body.
