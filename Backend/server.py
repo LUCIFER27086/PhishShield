@@ -1,18 +1,24 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin # IMPORTANT: Make sure cross_origin is imported
 from textblob import TextBlob
 import re
+import json
 
 # Initialize the Flask App
 app = Flask(__name__)
-# Enable CORS so the Chrome Extension can talk to this local server
-CORS(app)
+# Enable CORS for the entire application (safer for local development)
+CORS(app) 
 
 print("🛡️ PhishShield AI Server is Starting...")
 
-# --- 1. THE DETECTION LOGIC (Simplified for Demo) ---
-# Since you deleted your old models, this uses powerful heuristics 
-# and Sentiment Analysis until you retrain your ML model.
+# --- 1. Test Route for Debugging (GET request to check if server is running) ---
+@app.route('/', methods=['GET'])
+def home():
+    # This route is only for verifying the server is up and running.
+    return jsonify({"status": "PhishShield Server is running and healthy!", "version": "2.0"}), 200
+
+# --- 2. THE DETECTION LOGIC (Simplified for Demo) ---
+# NOTE: Replace this with your actual ML model loading and prediction logic later!
 
 def analyze_risk(text, subject):
     score = 0
@@ -68,12 +74,18 @@ def analyze_risk(text, subject):
         "reasons": list(set(reasons)) # Remove duplicates
     }
 
-# --- 2. THE API ENDPOINT ---
-# The Chrome Extension will send data here
+# --- 3. THE API ENDPOINT (Main scanning route) ---
 @app.route('/scan', methods=['POST'])
+@cross_origin() # <--- THIS IS THE FIX FOR THE CONNECTION ERROR
 def scan_email():
     try:
+        # Flask handles reading the JSON body from the POST request
         data = request.json
+        
+        # Simple validation
+        if not data or 'body' not in data:
+            return jsonify({"error": "Missing 'body' data in request."}), 400
+            
         email_text = data.get('body', '')
         email_subject = data.get('subject', 'No Subject')
 
@@ -84,8 +96,10 @@ def scan_email():
         return jsonify(result)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Server Error during scan: {e}")
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
 if __name__ == '__main__':
     # Run the server on localhost port 5000
-    app.run(port=5000, debug=True)
+    # Use 127.0.0.1 for maximum compatibility with localhost setup
+    app.run(host='127.0.0.1', port=5000, debug=True)

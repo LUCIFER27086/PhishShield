@@ -2,6 +2,9 @@
 
 console.log("🛡️ PhishShield Extension Loaded");
 
+// Target for the Python server (MUST use 127.0.0.1 to match manifest permissions)
+const SERVER_URL = 'http://127.0.0.1:5000/scan';
+
 // We need to wait for Gmail to render the email body.
 // We use a MutationObserver to watch the DOM.
 const observer = new MutationObserver((mutations) => {
@@ -32,7 +35,7 @@ async function scanWithPython(text, subject, elementToInject) {
     injectBanner("LOADING", {}, elementToInject);
 
     try {
-        const response = await fetch('http://localhost:5000/scan', {
+        const response = await fetch(SERVER_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -43,6 +46,12 @@ async function scanWithPython(text, subject, elementToInject) {
             })
         });
 
+        // Check for non-200 responses (e.g., 500 error from Flask)
+        if (!response.ok) {
+            // Throw an error that gets caught below
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+
         const data = await response.json();
         
         // Remove the loader and show real result
@@ -50,33 +59,43 @@ async function scanWithPython(text, subject, elementToInject) {
         injectBanner(data.verdict, data, elementToInject);
 
     } catch (error) {
+        // Updated error message to be more informative
         console.error("PhishShield Connection Error:", error);
         removeBanner(elementToInject);
-        injectBanner("ERROR", { error: "Is your Python backend running?" }, elementToInject);
+        injectBanner("ERROR", { error: error.message || "Ensure server is running and URLs match." }, elementToInject);
     }
 }
 
+/**
+ * Helper function to remove the existing banner element.
+ */
 function removeBanner(container) {
     const existing = container.querySelector('.phish-shield-banner');
     if (existing) existing.remove();
 }
 
+/**
+ * Helper function to create and inject the status banner into the email body.
+ */
 function injectBanner(status, data, container) {
     const banner = document.createElement('div');
-    banner.className = `phish-shield-banner ps-${status.toLowerCase()}`;
+    // Ensure status is uppercase for consistent class naming
+    const statusClass = status.toUpperCase();
+    banner.className = `phish-shield-banner ps-${statusClass.toLowerCase()}`;
     
     let htmlContent = '';
 
-    if (status === "LOADING") {
+    if (statusClass === "LOADING") {
         htmlContent = `
             <div class="ps-spinner"></div>
-            <span><strong>PhishShield:</strong> Analyzing email with Python AI...</span>
+            <span><strong>PhishShield:</strong> Analyzing email with Heuristic Scanner...</span>
         `;
-    } else if (status === "ERROR") {
+    } else if (statusClass === "ERROR") {
         htmlContent = `
-            <span><strong>⚠️ Connection Failed:</strong> Ensure server.py is running!</span>
+            <div class="ps-icon">❌</div>
+            <span><strong>⚠️ Connection Failed:</strong> Is your Python backend running? Details: ${data.error || 'Check browser console.'}</span>
         `;
-    } else if (status === "SAFE") {
+    } else if (statusClass === "SAFE") {
         htmlContent = `
             <div class="ps-icon">🛡️</div>
             <div>
@@ -85,16 +104,21 @@ function injectBanner(status, data, container) {
             </div>
         `;
     } else {
-        // Suspicious or Dangerous
+        // SUSPICIOUS or DANGEROUS
+        const icon = statusClass === "DANGEROUS" ? '💀' : '⚠️';
+        const riskScore = data.score !== undefined ? data.score.toFixed(0) : 'N/A';
+        const reasonsList = data.reasons && data.reasons.length > 0 ? data.reasons.join(', ') : 'Heuristic analysis triggered.';
+
         htmlContent = `
-            <div class="ps-icon">💀</div>
+            <div class="ps-icon">${icon}</div>
             <div>
-                <strong>${status} DETECTED (${data.score}% Risk)</strong><br>
-                <small>${data.reasons.join(', ')}</small>
+                <strong>${statusClass} DETECTED (${riskScore}% Risk)</strong><br>
+                <small>Reasons: ${reasonsList}</small>
             </div>
         `;
     }
 
     banner.innerHTML = htmlContent;
+    // Prepend (add to the top) of the email container
     container.prepend(banner);
 }
